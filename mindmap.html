@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>openai/math 调研 · 交互思维导图</title>
+<style>
+  :root { --bg:#0f1115; --fg:#e8eaf0; --muted:#9aa3b2; --accent:#7cc4ff; --card:#171b22; --border:#262c36; }
+  * { box-sizing:border-box; }
+  body { background:var(--bg); color:var(--fg); font-family:-apple-system,"PingFang SC","Microsoft YaHei",sans-serif; margin:0; padding:24px; line-height:1.6; }
+  h1 { font-size:22px; margin:0 0 4px; }
+  .sub { color:var(--muted); font-size:13px; margin-bottom:16px; }
+  .toolbar { margin-bottom:16px; display:flex; gap:8px; }
+  button { background:var(--card); color:var(--fg); border:1px solid var(--border); border-radius:8px; padding:6px 14px; cursor:pointer; font-size:13px; }
+  button:hover { border-color:var(--accent); }
+  ul.tree, ul.tree ul { list-style:none; margin:0; padding-left:22px; }
+  ul.tree { padding-left:0; }
+  li.node { margin:2px 0; }
+  .label { cursor:pointer; display:inline-block; padding:3px 10px; border-radius:8px; }
+  .label:hover { background:var(--card); }
+  .label .caret { display:inline-block; width:16px; color:var(--accent); font-size:12px; }
+  .label .text { font-size:14px; }
+  li.leaf > .label { cursor:default; }
+  li.leaf > .label:hover { background:none; }
+  li.leaf > .label .text { color:var(--muted); font-size:13px; }
+  li.root > .label .text { font-size:17px; font-weight:700; }
+  li.l1 > .label .text { font-size:15px; font-weight:600; color:var(--accent); }
+  ul.collapsed { display:none; }
+  .src { margin-top:24px; font-size:12px; color:var(--muted); }
+  .src a { color:var(--accent); }
+</style>
+</head>
+<body>
+<h1>openai/math 调研 · 交互思维导图</h1>
+<div class="sub">调研 · 2026-10-07 · 点击节点展开 / 折叠</div>
+<div class="toolbar">
+  <button id="expandAll">全部展开</button>
+  <button id="collapseAll">全部折叠</button>
+</div>
+<ul class="tree" id="tree"></ul>
+<div class="src">完整报告见 <a href="https://github.com/ringozzt/openai-math-research">ringozzt/openai-math-research · README.md</a> ｜ 研究对象 <a href="https://github.com/openai/math">openai/math</a></div>
+<script>
+const data = ["openai/math 调研", [
+  ["基本盘", [
+    "openai/math · 2026-10-06 创建，次日 3550 star / 314 fork",
+    "722 篇手稿 / 372 个结果家族 / 57,739 个文件",
+    "语言：Lean（形式化）+ LaTeX/PDF（手稿）",
+    "Apache-2.0——整个仓库，不是部分",
+    "57k 文件，git clone 全量很重；按需取 README / CONTENTS.md / overview.pdf"
+  ]],
+  ["这是什么", [
+    "内部未发布模型的数学评估副产品转正",
+    "旧数学评测被刷爆 → 扩大评估到开放研究问题 → 约 4000 个问题",
+    "够分量的结果整理成手稿公开发布",
+    "家族 = 主结果 + 配套论证 / 推论 / alternative 证明"
+  ]],
+  ["产出管线", [
+    "4000 个开放问题 → 内部模型（平均每结果 3h Pro 级 thinking）",
+    "→ 372 家族 / 722 手稿（preprints/：PDF + 源码 + BibTeX）",
+    "→ 部分 Lean 形式化（lean/ + formalization.yaml）",
+    "→ ComparatorChallenges：JSON 题目 + .lean 证明成对，一键机器核验",
+    "→ reasoning_traces/：10 个家族的删减版推理摘要",
+    "例外：黎曼 zeta 零点自由区域（人类编辑可读性）、CM Hodge（单独点名）"
+  ]],
+  ["验证机制：Lean 是信任锚", [
+    "Lean 4 + Mathlib：编译通过 = 证明成立，不必信任 OpenAI",
+    "comparator = proof 的 CI：lake env comparator xxx.json",
+    "信任分级：Lean 已形式化 > 人类可读手稿 > 纯 claim",
+    "官方诚实声明：未形式化的 could have issues，修了发新版本",
+    "版本史公开保留，旧版本可访问"
+  ]],
+  ["学科版图：17 分支", [
+    "数论 / 代数与复几何 / 实分析与复分析 / 凸与度量几何",
+    "理论计算机科学 / 动力系统与遍历论 / 组合数学 / 代数",
+    "概率与统计力学 / 数理逻辑 / 群论 / 数学物理",
+    "算子代数 / 拓扑 / 泛函分析 / 微分几何 / 偏微分方程"
+  ]],
+  ["头部成果点名", [
+    "003 准黎曼猜想：Dirichlet L 在 Re(s) > 7/8 无零点（另有 11/12 独立证明）",
+    "032 CM 阿贝尔簇有理 Hodge 猜想（顺带有限域 Tate 猜想）",
+    "002 完整 BSD 公式（Selmer corank 0/1，含 Sha 有限性）",
+    "004 ℚ 上 Hilbert 第十问题：否定解决",
+    "005 Catalan 常数无理性；017 π 无理性指数恰为 2",
+    "087 Mahler 猜想：对称 + 一般情形全维数解决",
+    "074 Kakeya：三维 maximal + 四维 Hausdorff",
+    "376 强制 Navier–Stokes 流中的通用计算"
+  ]],
+  ["开哪一层", [
+    "开：成果层——722 手稿 + Lean 证明，Apache-2.0",
+    "闭：模型层（内部未发布模型）+ 算力层",
+    "Lean 证明是 portability seam：机器可验证，脱离'信 OpenAI'前提",
+    "和普通预印本 dump 的本质区别：自带审计"
+  ]],
+  ["时间线", [
+    "2026-08-01：Astra 首秀，10 个十年难题 + Lean 证明，约 $2,000 token 成本",
+    "Gowers：会毫不犹豫推荐其中一篇给顶刊",
+    "2026-08：约 40 位数学家闭门会——'解题比消化快怎么办'",
+    "2026-09：Navier–Stokes 署名争议；Kun/Thom credit 纠纷后修订",
+    "2026-06-02（前置）：Leiden Declaration——披露、独立验证、人类负责",
+    "2026-10-06：仓库发布 + 数学顾问组成立（Gowers/Hairer/Witten 等 9 人，无报酬、可公开批评、无权干预节奏）"
+  ]],
+  ["给 agent 的三句话", [
+    "Autoformalization = AI 输出可被机器审计的范式",
+    "Comparator = proof 的 CI，可复现研究的形状",
+    "评估饱和驱动发布：评测先行领域的副产品外溢"
+  ]]
+]];
+
+function build(node, depth) {
+  const li = document.createElement("li");
+  const isLeaf = typeof node === "string";
+  li.className = "node " + (isLeaf ? "leaf" : (depth === 0 ? "root" : depth === 1 ? "l1" : ""));
+  const label = document.createElement("span");
+  label.className = "label";
+  const text = isLeaf ? node : node[0];
+  label.innerHTML = '<span class="caret">' + (isLeaf ? "" : "▸") + '</span><span class="text"></span>';
+  label.querySelector(".text").textContent = text;
+  li.appendChild(label);
+  if (!isLeaf) {
+    const ul = document.createElement("ul");
+    if (depth >= 1) ul.classList.add("collapsed");
+    node[1].forEach(child => ul.appendChild(build(child, depth + 1)));
+    li.appendChild(ul);
+    label.addEventListener("click", () => {
+      ul.classList.toggle("collapsed");
+      label.querySelector(".caret").textContent = ul.classList.contains("collapsed") ? "▸" : "▾";
+    });
+  }
+  return li;
+}
+const tree = document.getElementById("tree");
+tree.appendChild(build(data, 0));
+document.getElementById("expandAll").addEventListener("click", () => {
+  tree.querySelectorAll("ul.collapsed").forEach(u => u.classList.remove("collapsed"));
+  tree.querySelectorAll(".caret").forEach(c => c.textContent = "▾");
+});
+document.getElementById("collapseAll").addEventListener("click", () => {
+  tree.querySelectorAll("ul.tree ul").forEach(u => u.classList.add("collapsed"));
+  tree.querySelectorAll("li:not(.root) > .label .caret").forEach(c => c.textContent = "▸");
+});
+</script>
+</body>
+</html>
